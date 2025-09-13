@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lead Generation GPT — Google Ads Builder</title>
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--accent:#22c55e;--accent2:#38bdf8;--border:#1f2937;}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+    .container{max-width:1100px;margin:0 auto;padding:28px;}
+    .title{font-size:28px;font-weight:800;letter-spacing:0.2px;display:flex;gap:10px;align-items:center}
+    .subtitle{color:var(--muted);margin:6px 0 18px}
+    .card{background:linear-gradient(180deg,#0b1222, #0b1222) padding-box, radial-gradient(circle at 10% 10%,#1f2a44,transparent 40%), radial-gradient(circle at 90% 0%,#1c3d2b,transparent 40%);border:1px solid var(--border);border-radius:16px;padding:18px;margin:16px 0;box-shadow:0 10px 30px rgba(0,0,0,0.25)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input, select, textarea{width:100%;padding:12px 12px;border:1px solid var(--border);border-radius:12px;background:#0b1222;color:var(--text);font-size:14px;outline:none}
+    textarea{min-height:88px;resize:vertical}
+    button{cursor:pointer;border:none;border-radius:12px;padding:12px 16px;font-weight:700}
+    .btn{background:linear-gradient(90deg,var(--accent),#16a34a);color:#051b0b}
+    .btn.secondary{background:linear-gradient(90deg,var(--accent2),#0891b2);color:#00151b}
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:6px 10px;border:1px solid var(--border);border-radius:999px;margin:4px 6px 0 0;font-size:12px;color:#cbd5e1}
+    .section-title{font-size:18px;font-weight:800;margin:8px 0 8px}
+    pre{white-space:pre-wrap;background:#07101f;padding:12px;border-radius:12px;border:1px solid var(--border)}
+    table{width:100%;border-collapse:separate;border-spacing:0 8px}
+    th,td{text-align:left;padding:10px 12px;background:#0a1428;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    th:first-child, td:first-child{border-left:1px solid var(--border);border-top-left-radius:10px;border-bottom-left-radius:10px}
+    th:last-child, td:last-child{border-right:1px solid var(--border);border-top-right-radius:10px;border-bottom-right-radius:10px}
+    code.k{display:inline-block;background:#07101f;border:1px solid var(--border);padding:2px 8px;border-radius:8px;color:#a5b4fc;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .footer{margin-top:24px;color:var(--muted);font-size:12px}
+    .banner{display:flex;gap:10px;align-items:center;padding:12px 14px;border:1px dashed var(--border);background:#07101f;border-radius:12px;margin-top:8px}
+    @media(max-width:900px){.grid,.grid-3,.row,.row-3{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">🚀 Lead Generation GPT <span class="pill">Local</span></div>
+    <div class="subtitle">Generate complete Google Ads assets (keywords → campaign → RSA → extensions → landing page tips) from a single seed keyword.</div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Seed Keyword (e.g., <code class="k">Cyber Security Course</code>)</label>
+          <input id="seed" placeholder="Enter course seed keyword"/>
+        </div>
+        <div>
+          <label>Optional City (for location variants)</label>
+          <input id="city" placeholder="Hyderabad"/>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Audience Focus (comma separated)</label>
+          <input id="aud" placeholder="Freshers, Career Switchers, Working Professionals"/>
+        </div>
+        <div>
+          <label>USPs / Hooks (comma separated, used in copy)</label>
+          <input id="usps" placeholder="100% Practical, Dual Cert, Internship, Placement Help"/>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Phone (for call extension text)</label>
+          <input id="phone" placeholder="+91 91006 27191"/>
+        </div>
+        <div>
+          <label>Brand/Institute Name</label>
+          <input id="brand" placeholder="Cyber Security Masters"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn" onclick="generate()">Generate Package</button>
+        <button class="btn secondary" onclick="downloadJSON()">Download JSON</button>
+        <button class="btn ghost" onclick="downloadCSVs()">Export CSVs</button>
+      </div>
+      <div class="banner">
+        <div>Tip: Keep headlines ≤ <b>30</b> chars and descriptions ≤ <b>90</b> chars. The generator enforces hard limits.</div>
+      </div>
+    </div>
+
+    <div id="output"></div>
+
+    <div class="footer">© LeadGen GPT — runs 100% locally. No internet or APIs required.</div>
+  </div>
+
+<script>
+const byId = (id)=>document.getElementById(id);
+const clampStr = (s, max) => (s.length <= max ? s : s.slice(0, max)).trim();
+const uniq = (arr)=>[...new Set(arr.filter(Boolean).map(s=>s.trim()).filter(Boolean))];
+const csv = (rows)=> rows.map(r => r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+function defaultNegatives(){
+  return [
+    "free","salary","salaries","jobs","job","internship","stipend","youtube","udemy","coursera",
+    "torrent","pdf","book","books","slides","ppt","notes","quora","reddit","pirated","crack",
+    "syllabus pdf","sample paper","question paper","answers","hindi dubbed"
+  ];
+}
+
+function intentBuckets(seed){
+  return [
+    {intent:"Awareness", name:"Awareness – Basics", patterns:[
+      `what is ${seed}`, `${seed} basics`, `${seed} for beginners`, `${seed} introduction`, `${seed} demo class`
+    ]},
+    {intent:"Consideration", name:"Consideration – Compare/Best", patterns:[
+      `best ${seed}`, `top ${seed} institute`, `${seed} vs other`, `${seed} syllabus`, `${seed} reviews`
+    ]},
+    {intent:"Action", name:"Action – Enroll/Fees", patterns:[
+      `enroll in ${seed}`, `${seed} fees`, `join ${seed} today`, `${seed} near me`, `${seed} apply now`
+    ]}
+  ];
+}
+
+function longTail(seed, city){
+  const base = [
+    `best ${seed} ${city? 'in '+city : ''}`,
+    `${seed} online with certificate`,
+    `${seed} with placement assistance`,
+    `${seed} fees and duration`,
+    `${seed} weekend batch`,
+    `${seed} for freshers`,
+    `${seed} for working professionals`,
+    `${seed} live instructor led`,
+    `${seed} hands-on practical`,
+    `${seed} demo class registration`,
+    `${seed} internship included`,
+    `${seed} course outline`,
+    `${seed} practice labs`
+  ];
+  return uniq(base);
+}
+
+function matchTypes(seed){
+  return {
+    broad: [seed, seed.replace(/course/i, "training")],
+    phrase: [`"${seed}"`, `"${seed} training"`],
+    exact: [`[${seed}]`, `[${seed} training]`]
+  };
+}
+
+function audiences(seed){
+  return {
+    "in_market":[
+      "IT Training & Certification","Cybersecurity Products & Services","Online Education","Software Education"
+    ],
+    "affinity":[
+      "Technophiles","IT Professionals","Career Development","Network & System Admins"
+    ],
+    "custom_segments":[
+      `Intent: ${seed} fees`, `Intent: ${seed} certification`, `Intent: ${seed} demo class`
+    ],
+    "remarketing":[
+      "All site visitors (30d)","Engaged viewers (YouTube 30d)","Leads not enrolled (60d)"
+    ]
+  };
+}
+
+function budget(){
+  return { awareness_pct:30, consideration_pct:40, action_pct:30 };
+}
+
+function buildHeadlines(seed, brand, uspsList, intent){
+  const base = [
+    `${seed}`, `Learn ${seed}`, `Join ${seed} Today`, `Top ${seed} Training`,
+    `Become ${seed.split(" ")[0]} Pro`, `Career-Ready ${seed}`, `Live ${seed} Classes`,
+    `Certified ${seed}`, `Job-Focused ${seed}`, `Hands-On ${seed}`
+  ];
+  const hooks = [
+    `Limited Seats`, `Free Demo`, `3-Month Program`, `Dual Certificate`,
+    `Mentor-Led`, `Placement Help`, `Batch Starting Soon`, `${brand?brand:''}`
+  ];
+  const tweak = intent==="Awareness" ? ["Basics", "Beginner Friendly", "Start Here"]
+             : intent==="Consideration" ? ["Best Institute", "Top Reviews", "Why Choose Us"]
+             : ["Enroll Now", "Apply Today", "Fees & Batches"];
+  let ideas = [...base, ...hooks, ...tweak];
+  if (uspsList && uspsList.length){ ideas = ideas.concat(uspsList); }
+  ideas = uniq(ideas.map(x => clampStr(x.replace(/\s+/g,' ').trim(), 30)));
+  const withSeed = [
+    clampStr(`${seed}`,30),
+    clampStr(`Learn ${seed}`,30),
+    clampStr(`Enroll in ${seed}`,30),
+  ];
+  ideas = uniq([...withSeed, ...ideas]).slice(0, 10);
+  return ideas;
+}
+
+function buildDescriptions(seed, city, uspsList, intent){
+  const common = [
+    `Master ${seed} with live mentor-led training.`,
+    `Enroll now. 100% practical with labs + projects.`,
+    `Get certified. Build skills hiring managers value.`,
+    `Free demo class. Seats limited—book today.`,
+    `Placement assistance & interview prep included.`,
+    `Syllabus covers beginner to advanced topics.`,
+    `Hands-on practice, real case studies, guidance.`,
+    `Flexible batches${city? ' in '+city:''}. Online & offline.`,
+    `Career support with resume, mock interviews.`,
+    `Start your ${seed} journey this week.`
+  ];
+  const awareness = [
+    `Beginner-friendly intro to ${seed}. Simple, clear.`,
+    `Understand ${seed} basics with guided demos.`
+  ];
+  const consideration = [
+    `Compare institutes. See why students choose us.`,
+    `Transparent fees, syllabus, and outcomes.`
+  ];
+  const action = [
+    `Apply today—next batch starts soon.`,
+    `Fees, schedule, and demo in one click.`
+  ];
+  let ideas = [...common];
+  if (intent==="Awareness") ideas = uniq([...ideas, ...awareness]);
+  if (intent==="Consideration") ideas = uniq([...ideas, ...consideration]);
+  if (intent==="Action") ideas = uniq([...ideas, ...action]);
+  if (uspsList && uspsList.length) {
+    ideas = uniq([...ideas, ...uspsList.map(u => `${u} included.`)]);
+  }
+  ideas = ideas.map(x => clampStr(x, 90));
+  return ideas.slice(0, 10);
+}
+
+function extensions(seed, brand, phone){
+  return {
+    sitelinks: [
+      "Course Syllabus","Free Demo Class","Internship & Certification","Placement Assistance"
+    ],
+    callouts: [
+      "100% Practical","Expert Mentors","Dual Certificate","Limited Seats","Flexible Batches","EMI Options"
+    ],
+    structured_snippets: {
+      "Courses":[ "SOC","VAPT","Forensics","Ethical Hacking" ],
+      "Features":[ "Live Labs","Projects","Mock Interviews","Placement Help" ]
+    },
+    call_extension: phone ? `${brand||'Institute'} — ${phone}` : null
+  };
+}
+
+function landingPage(seed){
+  return {
+    Awareness:[
+      `Clear "What is ${seed}?" explainer`,
+      "Beginner outcomes in bullets",
+      "Demo class signup above the fold",
+      "Simple FAQ: duration, mode, requirements"
+    ],
+    Consideration:[
+      "Comparison table vs competitors",
+      "Syllabus download, trainer creds, reviews",
+      "Social proof: student outcomes, logos",
+      "Transparent fees with EMI options"
+    ],
+    Action:[
+      "Strong CTA: Enroll / Book Demo",
+      "Countdown to next batch",
+      "Scholarship/discount banners (ethical)",
+      "Form with phone/email + WhatsApp CTA"
+    ]
+  };
+}
+
+function buildPackage(seed, city, brand, audText, uspsText, phone){
+  seed = seed.trim();
+  const uspsList = uniq((uspsText||"").split(",")).slice(0,8);
+  const audienceOverrides = uniq((audText||"").split(",")).slice(0,8);
+
+  const core = matchTypes(seed);
+  const lt = longTail(seed, city);
+  const intents = intentBuckets(seed);
+  const negs = defaultNegatives();
+  const aud = audiences(seed);
+  if (audienceOverrides.length){
+    aud.affinity = uniq([...(aud.affinity||[]), ...audienceOverrides]);
+  }
+
+  const pkg = {
+    seed, city, brand,
+    budgets: budget(),
+    audiences: aud,
+    keywords: {
+      core, long_tail: lt, negatives: negs
+    },
+    campaigns: []
+  };
+
+  intents.forEach(group => {
+    const adGroupName = group.name;
+    const rsa = {
+      headlines: buildHeadlines(seed, brand, uspsList, group.intent),
+      descriptions: buildDescriptions(seed, city, uspsList, group.intent)
+    };
+    const adGroup = {
+      name: adGroupName,
+      intent: group.intent,
+      keywords: {
+        broad: uniq(group.patterns),
+        phrase: uniq(group.patterns.map(k => `"${k}"`)),
+        exact: uniq(group.patterns.map(k => `[${k}]`))
+      },
+      rsa
+    };
+    pkg.campaigns.push({
+      name: `${seed} — ${group.intent}`,
+      budget_pct: group.intent==="Awareness" ? 30 : group.intent==="Consideration" ? 40 : 30,
+      ad_groups: [adGroup]
+    });
+  });
+
+  pkg.extensions = extensions(seed, brand, phone);
+  pkg.landing_page = landingPage(seed);
+  return pkg;
+}
+
+function tableRows(arr){
+  return arr.map(v=>`<span class="pill">${v}</span>`).join(" ");
+}
+function renderPackage(pkg){
+  const out = byId("output");
+  const kw = pkg.keywords;
+  const ext = pkg.extensions;
+  const lp = pkg.landing_page;
+  const aud = pkg.audiences;
+  let html = ``;
+  html += `<div class="card">
+    <div class="section-title">Summary</div>
+    <div class="grid">
+      <div><b>Seed</b><div class="muted">${pkg.seed}</div></div>
+      <div><b>City</b><div class="muted">${pkg.city||'-'}</div></div>
+      <div><b>Budgets</b><div class="muted">Awareness ${pkg.budgets.awareness_pct}% • Consideration ${pkg.budgets.consideration_pct}% • Action ${pkg.budgets.action_pct}%</div></div>
+      <div><b>Brand</b><div class="muted">${pkg.brand||'-'}</div></div>
+    </div>
+  </div>`;
+  html += `<div class="card">
+    <div class="section-title">Keywords</div>
+    <div class="grid">
+      <div>
+        <b>Core — Broad</b><div>${tableRows(kw.core.broad)}</div>
+        <b>Core — Phrase</b><div>${tableRows(kw.core.phrase)}</div>
+        <b>Core — Exact</b><div>${tableRows(kw.core.exact)}</div>
+      </div>
+      <div>
+        <b>Long-Tail</b><div>${tableRows(kw.long_tail)}</div>
+        <b>Negatives</b><div>${tableRows(kw.negatives)}</div>
+      </div>
+    </div>
+  </div>`;
+  html += `<div class="card">
+    <div class="section-title">Suggested Audiences</div>
+    <div class="row-3">
+      <div><b>In-Market</b><div>${tableRows(aud.in_market)}</div></div>
+      <div><b>Affinity</b><div>${tableRows(aud.affinity)}</div></div>
+      <div><b>Custom Segments</b><div>${tableRows(aud.custom_segments)}</div></div>
+    </div>
+    <div style="margin-top:8px"><b>Remarketing</b><div>${tableRows(aud.remarketing)}</div></div>
+  </div>`;
+  pkg.campaigns.forEach(c => {
+    const ag = c.ad_groups[0];
+    html += `<div class="card">
+      <div class="section-title">Campaign: ${c.name} <span class="pill">Budget: ${c.budget_pct}%</span></div>
+      <div class="grid">
+        <div>
+          <b>Ad Group</b><div class="muted">${ag.name}</div>
+          <b>Intent</b><div class="muted">${ag.intent}</div>
+          <b>Keywords</b>
+          <div style="margin-top:6px">
+            <div><i>Broad</i><div>${tableRows(ag.keywords.broad)}</div></div>
+            <div><i>Phrase</i><div>${tableRows(ag.keywords.phrase)}</div></div>
+            <div><i>Exact</i><div>${tableRows(ag.keywords.exact)}</div></div>
+          </div>
+        </div>
+        <div>
+          <b>Responsive Search Ad</b>
+          <div style="margin-top:6px"><i>10 Headlines (≤30)</i><div>${tableRows(ag.rsa.headlines)}</div></div>
+          <div style="margin-top:6px"><i>10 Descriptions (≤90)</i><div>${tableRows(ag.rsa.descriptions)}</div></div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html += `<div class="card">
+    <div class="section-title">Ad Extensions</div>
+    <div class="row-3">
+      <div><b>Sitelinks</b><div>${tableRows(ext.sitelinks)}</div></div>
+      <div><b>Callouts</b><div>${tableRows(ext.callouts)}</div></div>
+      <div><b>Structured Snippets</b>
+        <div><i>Courses</i><div>${tableRows(ext.structured_snippets.Courses)}</div></div>
+        <div><i>Features</i><div>${tableRows(ext.structured_snippets.Features)}</div></div>
+      </div>
+    </div>
+    ${ext.call_extension ? `<div style="margin-top:8px"><b>Call Extension</b><div class="muted">${ext.call_extension}</div></div>` : ''}
+  </div>`;
+  html += `<div class="card">
+    <div class="section-title">Landing Page Content Focus</div>
+    <div class="grid">
+      <div><b>Awareness</b><div>${tableRows(lp.Awareness)}</div></div>
+      <div><b>Consideration</b><div>${tableRows(lp.Consideration)}</div></div>
+    </div>
+    <div style="margin-top:8px"><b>Action</b><div>${tableRows(lp.Action)}</div></div>
+  </div>`;
+  out.innerHTML = html;
+  window._leadgen_pkg = pkg;
+}
+
+function generate(){
+  const seed = byId("seed").value || "Cyber Security Course";
+  const city = byId("city").value || "";
+  const aud = byId("aud").value || "";
+  const usps = byId("usps").value || "100% Practical,Dual Certificate,Internship,Placement Help,Batch Starting Soon";
+  const phone = byId("phone").value || "";
+  const brand = byId("brand").value || "";
+  const pkg = buildPackage(seed, city, brand, aud, usps, phone);
+  renderPackage(pkg);
+  document.getElementById("output").scrollIntoView({behavior:"smooth"});
+}
+
+function downloadJSON(){
+  const data = window._leadgen_pkg || buildPackage("Cyber Security Course","","","","","");
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = slug((data.seed||"leadgen")) + "-ads-package.json";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function downloadCSVs(){
+  const data = window._leadgen_pkg || buildPackage("Cyber Security Course","","","","","");
+  const files = {};
+  const kws = [];
+  data.keywords.core.broad.forEach(k=>kws.push(["broad",k]));
+  data.keywords.core.phrase.forEach(k=>kws.push(["phrase",k]));
+  data.keywords.core.exact.forEach(k=>kws.push(["exact",k]));
+  data.keywords.long_tail.forEach(k=>kws.push(["long_tail",k]));
+  const kwCSV = "match_type,keyword\n" + csv(kws);
+  files["keywords.csv"] = kwCSV;
+  const negCSV = "negative_keyword\n" + data.keywords.negatives.map(k=>`"${k.replace(/"/g,'""')}"`).join("\n");
+  files["negatives.csv"] = negCSV;
+  const rows = [["campaign","ad_group","intent","budget_pct","headlines(10)","descriptions(10)","broad","phrase","exact"]];
+  data.campaigns.forEach(c=>{
+    c.ad_groups.forEach(ag=>{
+      rows.push([
+        c.name, ag.name, ag.intent, c.budget_pct,
+        ag.rsa.headlines.join(" | "),
+        ag.rsa.descriptions.join(" | "),
+        ag.keywords.broad.join(" | "),
+        ag.keywords.phrase.join(" | "),
+        ag.keywords.exact.join(" | ")
+      ]);
+    });
+  });
+  files["ad_groups_ads.csv"] = rows.map(r=>r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+  const exRows = [["type","values"]];
+  exRows.push(["sitelinks", (data.extensions.sitelinks||[]).join(" | ")]);
+  exRows.push(["callouts", (data.extensions.callouts||[]).join(" | ")]);
+  exRows.push(["structured_snippets_Courses", (data.extensions.structured_snippets?.Courses||[]).join(" | ")]);
+  exRows.push(["structured_snippets_Features", (data.extensions.structured_snippets?.Features||[]).join(" | ")]);
+  if (data.extensions.call_extension) exRows.push(["call_extension", data.extensions.call_extension]);
+  files["extensions.csv"] = exRows.map(r=>r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+
+  // Use data URIs for a simple "bundle" as a single HTML file with embedded CSVs links (no JSZip without internet)
+  let bundle = "<!doctype html><meta charset='utf-8'><title>LeadGen Exports</title><h1>LeadGen Exports</h1>";
+  for (const [name, content] of Object.entries(files)){
+    const uri = "data:text/csv;charset=utf-8," + encodeURIComponent(content);
+    bundle += `<p><a download="${name}" href="${uri}">Download ${name}</a></p>`;
+  }
+  const blob = new Blob([bundle], {type:"text/html"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = slug((data.seed||"leadgen")) + "-exports.html";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// Lazy build default on load
+window.addEventListener("load", ()=>{
+  const pkg = buildPackage("Cyber Security Course","","Cyber Security Masters","","100% Practical,Dual Certificate,Internship,Placement Help,Batch Starting Soon","+91 91006 27191");
+  renderPackage(pkg);
+});
+</script>
+</body>
+</html>
